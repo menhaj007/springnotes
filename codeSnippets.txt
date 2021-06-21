@@ -1,0 +1,215 @@
+    REST Resources:
+    React:
+    onSubmit() {
+    this.httpClient.post(
+    'http://localhost:8080/design',
+    this.model, {
+    headers: new HttpHeaders().set('Content-type', 'application/json'),
+    }).subscribe(taco => this.cart.addToCart(taco));
+    this.router.navigate(['/cart']);
+    }
+    SpringBoot:
+    
+    @PostMapping(consumes="application/json")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Taco postTaco(@RequestBody Taco taco) {
+    return tacoRepo.save(taco);
+    }
+
+
+    //sample
+    @PatchMapping(path="/{orderId}", consumes="application/json")
+    public Order patchOrder(@PathVariable("orderId") Long orderId, @RequestBody Order patch) {
+    Order order = repo.findById(orderId).get();
+    if (patch.getDeliveryName() != null) {
+    order.setDeliveryName(patch.getDeliveryName());
+    }
+    if (patch.getDeliveryStreet() != null) {
+    order.setDeliveryStreet(patch.getDeliveryStreet());
+    }
+    if (patch.getDeliveryCity() != null) {
+    order.setDeliveryCity(patch.getDeliveryCity());
+    }
+    if (patch.getDeliveryState() != null) {
+    order.setDeliveryState(patch.getDeliveryState());
+    }
+    if (patch.getDeliveryZip() != null) {
+    order.setDeliveryZip(patch.getDeliveryState());
+    }
+    if (patch.getCcNumber() != null) {
+    order.setCcNumber(patch.getCcNumber());
+    }
+    if (patch.getCcExpiration() != null) {
+    order.setCcExpiration(patch.getCcExpiration());
+    }
+    if (patch.getCcCVV() != null) {
+    order.setCcCVV(patch.getCcCVV());
+    }
+    return repo.save(order);
+    }
+
+    This particular flavor of HATEOAS is known as HAL (Hypertext Application Language;
+    http://stateless.co/hal_specification.html), a simple and commonly used format
+    for embedding hyperlinks in JSON responses.
+    <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-hateoas</artifactId>
+    </dependency>
+
+
+    @GetMapping("/")
+    public ResponseEntity<List<UsersDTO>> listAllUsers() {
+    List<UsersDTO> users = userJpaRepository.findAll();
+    return new ResponseEntity<List<UsersDTO>>(users, HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<UsersDTO> createUser(@RequestBody final UsersDTO user) {
+    userJpaRepository.save(user);
+    return new ResponseEntity<UsersDTO>(user, HttpStatus.CREATED);
+    }
+
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UsersDTO> getUserById(@PathVariable("id") final Long id) {
+    UsersDTO user = userJpaRepository.findById(id);
+    return new ResponseEntity<UsersDTO>(user, HttpStatus.OK);
+    }
+
+
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<UsersDTO> updateUser(
+    @PathVariable("id") final Long id, @RequestBody UsersDTO user) {
+    // fetch user based on id and set it to currentUser object of type UserDTO
+    UsersDTO currentUser = userJpaRepository.findById(id);
+    // update currentUser object data with user object data
+    currentUser.setName(user.getName());
+    currentUser.setAddress(user.getAddress());
+    currentUser.setEmail(user.getEmail());
+    // save currentUser obejct
+    userJpaRepository.saveAndFlush(currentUser);
+    //return ResponseEntity object
+    return new ResponseEntity<UsersDTO>(currentUser, HttpStatus.OK);
+    }
+
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<UsersDTO> deleteUser(@PathVariable("id") final Long id) {
+    userJpaRepository.delete(id);
+    return new ResponseEntity<UsersDTO>(HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UsersDTO> getUserById(@PathVariable("id") final Long id) {
+    UsersDTO user = userJpaRepository.findById(id);
+    if (user == null) {
+    return new ResponseEntity<UsersDTO>(
+    new CustomErrorType("User with id "
+    + id + " not found"), HttpStatus.NOT_FOUND);
+    }
+    return new ResponseEntity<UsersDTO>(user, HttpStatus.OK);
+    }
+
+
+    Custom Error Response
+    Now let’s create the CustomErrorType class in the com.apress.ravi.Exception package under src/main/
+    java. Listing 2-14 shows the necessary code implementation for the CustomErrorType class.
+    Listing 2-14. CustomErrorType Class
+    package com.apress.ravi.Exception;
+    import com.apress.ravi.dto.UsersDTO;
+    public class CustomErrorType extends UsersDTO {
+    private String errorMessage;
+    public CustomErrorType(final String errorMessage){
+    this.errorMessage = errorMessage;
+    }
+    @Override
+    public String getErrorMessage() {
+    return errorMessage;
+    }
+    }
+
+    // method to get list of users
+@GetMapping("/")
+public ResponseEntity<List<UsersDTO>> listAllUsers() {
+List<UsersDTO> users = userJpaRepository.findAll();
+if (users.isEmpty()) {
+return new ResponseEntity<List<UsersDTO>>(HttpStatus.NO_CONTENT);
+}
+return new ResponseEntity<List<UsersDTO>>(users, HttpStatus.OK);
+}
+// method to get user by id
+@GetMapping("/{id}")
+public ResponseEntity<UsersDTO> getUserById(@PathVariable("id") final Long id) {
+UsersDTO user = userJpaRepository.findById(id);
+if (user == null) {
+return new ResponseEntity<UsersDTO>(
+new CustomErrorType("User with id "
++ id + " not found"), HttpStatus.NOT_FOUND);
+}
+return new ResponseEntity<UsersDTO>(user, HttpStatus.OK);
+}
+// method to create an user
+@PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE)
+public ResponseEntity<UsersDTO> createUser(@RequestBody final UsersDTO user) {
+if (userJpaRepository.findByName(user.getName()) != null) {
+return new ResponseEntity<UsersDTO>(new CustomErrorType(
+"Unable to create new user. A User with name "
++ user.getName() + " already exist."),HttpStatus.CONFLICT);
+}
+userJpaRepository.save(user);
+return new ResponseEntity<UsersDTO>(user, HttpStatus.CREATED);
+}
+// method to update an existing user
+@PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+public ResponseEntity<UsersDTO> updateUser(
+@PathVariable("id") final Long id, @RequestBody UsersDTO user) {
+UsersDTO currentUser = userJpaRepository.findById(id);
+if (currentUser == null) {
+return new ResponseEntity<UsersDTO>(
+new CustomErrorType("Unable to upate. User with id "
++ id + " not found."), HttpStatus.NOT_FOUND);
+}
+currentUser.setName(user.getName());
+currentUser.setAddress(user.getAddress());
+currentUser.setEmail(user.getEmail());
+userJpaRepository.saveAndFlush(currentUser);
+return new ResponseEntity<UsersDTO>(currentUser, HttpStatus.OK);
+}
+// delete an existing user
+@DeleteMapping("/{id}")
+public ResponseEntity<UsersDTO> deleteUser(@PathVariable("id") final Long id) {
+UsersDTO user = userJpaRepository.findById(id);
+if (user == null) {
+return new ResponseEntity<UsersDTO>(
+new CustomErrorType("Unable to delete. User with id "
++ id + " not found."), HttpStatus.NOT_FOUND);
+}
+userJpaRepository.delete(id);
+return new ResponseEntity<UsersDTO>(
+new CustomErrorType("Deleted User with id "
++ id + "."), HttpStatus.NO_CONTENT);
+}
+
+
+
+    @Valid on @RequestBody in UserRegistrationRestController Method
+    Arguments
+    Add the @Valid annotation to the createUser method’s UsersDTO parameter in the
+    UserRegistrationRestController endpoint, as shown in Listing 2-17.
+    Listing 2-17. UserRegistrationRestController Annotated with @Valid Annotations
+    @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<UsersDTO> createUser(
+    @Valid @RequestBody final UsersDTO user) {
+    logger.info("Creating User : {}", user);
+    if (userJpaRepository.findByName(user.getName()) != null) {
+    logger.error("Unable to create. A User with name {} already exist",
+    user.getName());
+    return new ResponseEntity<UsersDTO>(
+    new CustomErrorType(
+    "Unable to create new user. A User with name "
+    + user.getName() + " already exist."),
+    HttpStatus.CONFLICT);
+    }
+    userJpaRepository.save(user);
+    return new ResponseEntity<UsersDTO>(user, HttpStatus.CREATED);
+    }
